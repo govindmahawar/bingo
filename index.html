@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -8,196 +8,112 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js">
     </script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js">
-    </script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js">
-    </script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js">
     </script>
 </head>
 <body>
 
-    <!-- ===== TOAST CONTAINER ===== -->
+    <!-- ============================================= -->
+    <!-- TOAST CONTAINER -->
+    <!-- ============================================= -->
     <div id="toast-container"></div>
 
-    <!-- ============================================================ -->
-    <!-- SCREEN 1: LOGIN -->
-    <!-- ============================================================ -->
-    <div id="screen-login" class="screen active">
-        <div class="auth-container">
-            <div class="auth-logo">♛</div>
-            <h1 class="auth-title">BINGO jatin jhtu</h1>
-            <p class="auth-sub">Sign in to continue</p>
-
-            <div class="auth-form">
-                <div class="input-group">
-                    <label>Email address</label>
-                    <input type="email" id="login-email" placeholder="you@example.com" />
-                </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" id="login-password" placeholder="Enter password" />
-                </div>
-
-                <button id="btn-login" class="btn-primary btn-block">Sign In</button>
-
-                <div class="auth-divider"><span>or</span></div>
-
-                <button class="btn-outline btn-block" disabled>Continue with Google</button>
-                <button class="btn-outline btn-block" disabled>Continue with Phone</button>
-
-                <p class="auth-switch">
-                    Don't have an account? <span id="goto-signup">Sign up</span>
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <!-- ============================================================ -->
-    <!-- SCREEN 2: SIGNUP -->
-    <!-- ============================================================ -->
-    <div id="screen-signup" class="screen">
-        <div class="auth-container">
-            <div class="auth-logo">♛</div>
-            <h1 class="auth-title">BINGO</h1>
-            <p class="auth-sub">Create your account</p>
-
-            <div class="auth-form">
-                <div class="input-group">
-                    <label>Full name</label>
-                    <input type="text" id="signup-name" placeholder="John Doe" />
-                </div>
-                <div class="input-group">
-                    <label>Email address</label>
-                    <input type="email" id="signup-email" placeholder="you@example.com" />
-                </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" id="signup-password" placeholder="Min 6 characters" />
-                </div>
-
-                <button id="btn-signup" class="btn-primary btn-block">Create Account</button>
-
-                <div class="auth-divider"><span>or</span></div>
-
-                <button class="btn-outline btn-block" disabled>Continue with Google</button>
-                <button class="btn-outline btn-block" disabled>Continue with Phone</button>
-
-                <p class="auth-switch">
-                    Already have an account? <span id="goto-login">Sign in</span>
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <!-- ============================================================ -->
-    <!-- SCREEN 3: MAIN APP -->
-    <!-- ============================================================ -->
-    <div id="screen-main" class="screen">
+    <!-- ============================================= -->
+    <!-- MAIN APP (Direct, No Login) -->
+    <!-- ============================================= -->
+    <div id="screen-main" class="screen active">
         <div class="app-container">
 
             <!-- ===== HEADER ===== -->
             <header class="app-header">
                 <div class="header-left">
-                    <span class="app-logo">♛</span>
-                    <span class="app-title">BINGO</span>
+                    <span class="app-title">🎯 BINGO</span>
                 </div>
                 <div class="header-right" id="header-profile">
                     <span class="header-name" id="header-name">Player</span>
-                    <div class="header-avatar" id="header-avatar">P</div>
+                    <span class="header-avatar" id="header-avatar">👤</span>
                 </div>
             </header>
 
             <!-- ===== PAGES ===== -->
             <div class="pages-container">
 
-                <!-- ===== HOME PAGE ===== -->
+                <!-- HOME PAGE -->
                 <div id="page-home" class="page active">
-                    <div class="home-greeting">
-                        <p class="greeting-line" id="greeting-text">Good evening</p>
-                        <h2 class="greeting-name" id="welcome-name">Player</h2>
+                    <div class="welcome-section">
+                        <p class="welcome-greeting">Welcome to</p>
+                        <h2 id="welcome-name">BINGO</h2>
                     </div>
 
-                    <div class="home-actions">
-                        <div class="action-card" id="btn-create-room">
-                            <div class="action-icon">+</div>
-                            <div class="action-info">
-                                <h3>Create Room</h3>
-                                <p>Host a new game</p>
-                            </div>
+                    <div class="game-modes">
+                        <div class="mode-card" id="btn-create-room">
+                            <div class="mode-icon">➕</div>
+                            <h3>Create Room</h3>
+                            <p>Host a new game</p>
                         </div>
-                        <div class="action-card" id="btn-join-room">
-                            <div class="action-icon">⌨</div>
-                            <div class="action-info">
-                                <h3>Join Room</h3>
-                                <p>Enter room code</p>
-                            </div>
+                        <div class="mode-card" id="btn-join-room">
+                            <div class="mode-icon">⌨️</div>
+                            <h3>Join Room</h3>
+                            <p>Enter room code</p>
                         </div>
                     </div>
 
-                    <div class="home-banner">
-                        <span>⭐ Play & earn coins</span>
+                    <div class="incentives">
+                        ⭐ Play & Win Coins
                     </div>
                 </div>
 
-                <!-- ===== PROFILE PAGE ===== -->
+                <!-- PROFILE PAGE -->
                 <div id="page-profile" class="page">
-                    <div class="profile-container">
-                        <div class="profile-avatar-large" id="profile-avatar-large">P</div>
-                        <h2 class="profile-name" id="profile-name">Player</h2>
-                        <p class="profile-email" id="profile-email">email@example.com</p>
-
-                        <div class="profile-stats">
-                            <div class="stat-box">
+                    <div class="profile-card">
+                        <div class="profile-avatar" id="profile-avatar">👤</div>
+                        <h3 id="profile-name">Player</h3>
+                        <p id="profile-email">Guest Mode</p>
+                        <div class="stats-grid">
+                            <div class="stat-item">
                                 <span class="stat-number" id="stat-matches">0</span>
                                 <span class="stat-label">Matches</span>
                             </div>
-                            <div class="stat-box">
+                            <div class="stat-item">
                                 <span class="stat-number" id="stat-wins">0</span>
                                 <span class="stat-label">Wins</span>
                             </div>
-                            <div class="stat-box">
+                            <div class="stat-item">
                                 <span class="stat-number" id="stat-winrate">0%</span>
                                 <span class="stat-label">Win Rate</span>
                             </div>
                         </div>
-
-                        <button id="btn-edit-profile" class="btn-secondary btn-block">Edit Profile</button>
-                        <button id="btn-logout-mobile" class="btn-danger btn-block">Sign Out</button>
+                        <button id="btn-edit-profile" class="btn-secondary">Edit Profile</button>
                     </div>
                 </div>
 
-                <!-- ===== RULES PAGE ===== -->
+                <!-- INSTRUCTIONS PAGE -->
                 <div id="page-instructions" class="page">
-                    <div class="rules-container">
-                        <h2 class="rules-title">How to Play</h2>
-
-                        <div class="rule-item">
-                            <div class="rule-number">1</div>
+                    <div class="instructions-content">
+                        <h2>📖 How to Play</h2>
+                        <div class="rule-card">
+                            <div class="rule-icon">1</div>
                             <div>
-                                <h4>5×5 Board</h4>
-                                <p>Numbers 1 to 25 are placed randomly</p>
+                                <h4>5x5 Board</h4>
+                                <p>Numbers 1-25 randomly placed</p>
                             </div>
                         </div>
-
-                        <div class="rule-item">
-                            <div class="rule-number">2</div>
+                        <div class="rule-card">
+                            <div class="rule-icon">2</div>
                             <div>
                                 <h4>Multiplayer</h4>
-                                <p>2 to 5 players take turns</p>
+                                <p>2 to 5 players, take turns</p>
                             </div>
                         </div>
-
-                        <div class="rule-item">
-                            <div class="rule-number">3</div>
+                        <div class="rule-card">
+                            <div class="rule-icon">3</div>
                             <div>
                                 <h4>Mark Numbers</h4>
-                                <p>Tap a number to cross it</p>
+                                <p>Tap to cross your numbers</p>
                             </div>
                         </div>
-
-                        <div class="rule-item">
-                            <div class="rule-number">4</div>
+                        <div class="rule-card">
+                            <div class="rule-icon">4</div>
                             <div>
                                 <h4>Win Condition</h4>
                                 <p>First to complete 5 lines wins</p>
@@ -206,70 +122,55 @@
                     </div>
                 </div>
 
-                <!-- ===== CREATE ROOM PAGE ===== -->
+                <!-- CREATE ROOM PAGE -->
                 <div id="page-create-room" class="page">
-                    <div class="form-container">
-                        <h2 class="form-title">Create Room</h2>
-
-                        <div class="input-group">
-                            <label>Number of players</label>
-                            <select id="room-player-count">
-                                <option value="2">2 Players</option>
-                                <option value="3">3 Players</option>
-                                <option value="4">4 Players</option>
-                                <option value="5">5 Players</option>
-                            </select>
-                        </div>
-
-                        <button id="btn-create-room-final" class="btn-primary btn-block">Create Room</button>
-
+                    <div class="room-form">
+                        <h2>Create Room</h2>
+                        <label>Number of players</label>
+                        <select id="room-player-count">
+                            <option value="2">2 Players</option>
+                            <option value="3">3 Players</option>
+                            <option value="4">4 Players</option>
+                            <option value="5">5 Players</option>
+                        </select>
+                        <button id="btn-create-room-final" class="btn-primary">Create Room</button>
                         <div id="room-code-display" style="display:none;">
                             <div class="room-code-card">
                                 <p class="room-code-label">Room Code</p>
-                                <div class="room-code-value" id="room-code">XXXXXX</div>
+                                <div class="room-code-large" id="room-code">XXXXXX</div>
                                 <button id="btn-copy-code" class="btn-copy">Copy Code</button>
                             </div>
                         </div>
-
-                        <button id="btn-back-home" class="btn-secondary btn-block">Back</button>
+                        <button id="btn-back-home" class="btn-secondary">Back</button>
                     </div>
                 </div>
 
-                <!-- ===== JOIN ROOM PAGE ===== -->
+                <!-- JOIN ROOM PAGE -->
                 <div id="page-join-room" class="page">
-                    <div class="form-container">
-                        <h2 class="form-title">Join Room</h2>
-
-                        <div class="input-group">
-                            <label>Room code</label>
-                            <input type="text" id="join-room-code" placeholder="Enter code" maxlength="6" />
-                        </div>
-
-                        <div class="input-group">
-                            <label>Your name</label>
-                            <input type="text" id="join-player-name" placeholder="Enter your name" />
-                        </div>
-
-                        <button id="btn-join-room-final" class="btn-primary btn-block">Join Room</button>
-                        <button id="btn-back-home-2" class="btn-secondary btn-block">Back</button>
+                    <div class="room-form">
+                        <h2>Join Room</h2>
+                        <label>Room code</label>
+                        <input type="text" id="join-room-code" placeholder="Enter code" maxlength="6" style="text-transform:uppercase;letter-spacing:4px;font-weight:700;" />
+                        <label>Your name</label>
+                        <input type="text" id="join-player-name" placeholder="Enter your name" value="Guest" />
+                        <button id="btn-join-room-final" class="btn-primary">Join Room</button>
+                        <button id="btn-back-home-2" class="btn-secondary">Back</button>
                     </div>
                 </div>
 
-                <!-- ===== GAME PAGE ===== -->
+                <!-- GAME PAGE -->
                 <div id="page-game" class="page">
                     <div class="game-header">
-                        <div class="game-room-bar">
-                            <span>Room <strong id="game-room-id">---</strong></span>
-                            <span>Players <strong id="game-players">0</strong></span>
+                        <div class="game-room-info">
+                            <span class="room-badge">Room <span id="game-room-id">---</span></span>
+                            <span class="player-count">Players <span id="game-players">0</span></span>
                         </div>
-                        <div class="game-turn-bar" id="game-turn">
-                            Waiting for opponent...
+                        <div class="game-turn-indicator" id="game-turn">
+                            Waiting...
                         </div>
                     </div>
-
                     <div id="game-boards-container"></div>
-
-                    <button id="btn-leave-room" class="btn-danger btn-block">Leave Room</button>
+                    <button id="btn-leave-room" class="btn-danger">Leave Room</button>
                 </div>
 
             </div>
@@ -277,15 +178,15 @@
             <!-- ===== BOTTOM NAVIGATION ===== -->
             <nav class="bottom-nav">
                 <div class="nav-item active" data-page="home">
-                    <span class="nav-icon">⌂</span>
+                    <span class="nav-icon">🏠</span>
                     <span class="nav-label">Home</span>
                 </div>
                 <div class="nav-item" data-page="profile">
-                    <span class="nav-icon">◉</span>
+                    <span class="nav-icon">👤</span>
                     <span class="nav-label">Profile</span>
                 </div>
                 <div class="nav-item" data-page="instructions">
-                    <span class="nav-icon">?</span>
+                    <span class="nav-icon">📖</span>
                     <span class="nav-label">Rules</span>
                 </div>
             </nav>
