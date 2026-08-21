@@ -24,6 +24,10 @@ const firestore = firebase.firestore();
 
 function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
+    if (!container) {
+        console.warn('Toast container not found');
+        return;
+    }
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
@@ -122,7 +126,8 @@ const UIManager = {
 
     showScreen(screenId) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById(screenId).classList.add('active');
+        const screen = document.getElementById(screenId);
+        if (screen) screen.classList.add('active');
     },
 
     showPage(pageId) {
@@ -148,7 +153,8 @@ const UIManager = {
             let greeting = 'Good evening';
             if (hour < 12) greeting = 'Good morning';
             else if (hour < 17) greeting = 'Good afternoon';
-            document.querySelector('.welcome-greeting').textContent = greeting;
+            const greetingEl = document.querySelector('.welcome-greeting');
+            if (greetingEl) greetingEl.textContent = greeting;
         }
     },
 
@@ -191,7 +197,8 @@ const UIManager = {
     },
 
     clearBoards() {
-        document.getElementById('game-boards-container').innerHTML = '';
+        const container = document.getElementById('game-boards-container');
+        if (container) container.innerHTML = '';
     },
 
     updateGameStatus(roomId, players, currentTurn) {
@@ -219,16 +226,19 @@ const UIManager = {
 
     showRoomCode(code) {
         const display = document.getElementById('room-code-display');
-        display.style.display = 'block';
-        document.getElementById('room-code').textContent = code;
-        showToast(`Room created! Code: ${code}`, 'success');
-        setTimeout(() => {
-            display.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 300);
+        if (display) {
+            display.style.display = 'block';
+            document.getElementById('room-code').textContent = code;
+            showToast(`Room created! Code: ${code}`, 'success');
+            setTimeout(() => {
+                display.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        }
     },
 
     hideRoomCode() {
-        document.getElementById('room-code-display').style.display = 'none';
+        const display = document.getElementById('room-code-display');
+        if (display) display.style.display = 'none';
     }
 };
 
@@ -248,7 +258,7 @@ const BoardGenerator = {
 };
 
 // ================================================================
-// BLOCK 6: ROOM MANAGER
+// BLOCK 6: ROOM MANAGER (WITH PRIVACY FIX)
 // ================================================================
 
 const RoomManager = {
@@ -403,6 +413,9 @@ const RoomManager = {
         return Math.random().toString(36).substring(2, 8).toUpperCase();
     },
 
+    // ================================================================
+    // 🔥 FIX: Sirf apna board dikhao, doosre ka nahi!
+    // ================================================================
     listenRoom(roomId) {
         const user = AuthManager.getCurrentUser();
         if (!user) return;
@@ -418,22 +431,27 @@ const RoomManager = {
             const players = room.players || [];
             UIManager.updateGameStatus(roomId, players, room.currentTurn);
 
+            // ============================================================
+            // PRIVACY FIX: Sirf current user ka board render karo
+            // ============================================================
             UIManager.clearBoards();
             const boards = room.playerBoards || {};
             const currentTurn = room.currentTurn;
             const winner = room.winner;
 
-            Object.keys(boards).forEach(playerId => {
-                const board = boards[playerId];
-                const isMyBoard = (playerId === user.uid);
-                const isCurrentPlayer = (currentTurn === playerId && !winner);
-                UIManager.renderBoard(board, playerId, isCurrentPlayer, isMyBoard);
-            });
+            // Sirf current user ka board
+            const myBoard = boards[user.uid];
+            if (myBoard) {
+                const isCurrentPlayer = (currentTurn === user.uid && !winner);
+                UIManager.renderBoard(myBoard, user.uid, isCurrentPlayer, true);
+            }
 
+            // Winner check
             if (winner) {
                 UIManager.showWinner(winner);
             }
 
+            // Winning cells highlight
             if (room.winningCells) {
                 document.querySelectorAll('.board-cell').forEach(cell => {
                     const index = parseInt(cell.dataset.index);
@@ -488,6 +506,8 @@ const GameLogic = {
                     updates['winner'] = playerId;
                     updates['winningCells'] = result.winningCells;
                     showToast(`🎉 You won!`, 'success');
+                    // Update profile stats
+                    ProfileManager.addWin(user.uid);
                 } else {
                     const players = room.players || [];
                     const currentIndex = players.indexOf(playerId);
@@ -505,6 +525,7 @@ const GameLogic = {
         let winningCells = [];
         let lineCount = 0;
 
+        // Check rows
         for (let r = 0; r < size; r++) {
             let allCrossed = true;
             const rowCells = [];
@@ -519,6 +540,7 @@ const GameLogic = {
             }
         }
 
+        // Check columns
         for (let c = 0; c < size; c++) {
             let allCrossed = true;
             const colCells = [];
@@ -533,6 +555,7 @@ const GameLogic = {
             }
         }
 
+        // Check diagonals
         let d1 = true, d2 = true;
         const diag1 = [], diag2 = [];
         for (let i = 0; i < size; i++) {
@@ -602,6 +625,7 @@ const ProfileManager = {
 // ================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Bottom navigation
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
             const page = item.dataset.page;
@@ -610,6 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Edit profile
     document.getElementById('btn-edit-profile').addEventListener('click', () => {
         const user = AuthManager.getCurrentUser();
         if (!user) return;
@@ -625,7 +650,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Initialize
     AuthManager.init();
     RoomManager.init();
     console.log('🎯 BINGO - Premium UI Loaded');
+    console.log('✅ Privacy Fix: Only your board is visible!');
 });
