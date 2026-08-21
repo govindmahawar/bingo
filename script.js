@@ -1,3 +1,4 @@
+
 // ================================================================
 // BLOCK 1: FIREBASE CONFIG
 // ================================================================
@@ -24,15 +25,11 @@ const firestore = firebase.firestore();
 
 function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
-    if (!container) {
-        console.warn('Toast container not found');
-        return;
-    }
+    if (!container) return;
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
     container.appendChild(toast);
-
     setTimeout(() => {
         if (toast.parentNode) toast.remove();
     }, 3500);
@@ -118,7 +115,7 @@ const AuthManager = {
 };
 
 // ================================================================
-// BLOCK 4: UI RENDERER
+// BLOCK 4: UI RENDERER (SAB NUMBERS DIKHENGE + SYNC)
 // ================================================================
 
 const UIManager = {
@@ -158,6 +155,9 @@ const UIManager = {
         }
     },
 
+    // ============================================================
+    // 🔥 FIX: Sab numbers dikho + doosre ka board bhi dikho
+    // ============================================================
     renderBoard(boardData, playerId, isCurrentPlayer, isMyBoard) {
         const container = document.getElementById('game-boards-container');
         if (!container) return;
@@ -167,7 +167,7 @@ const UIManager = {
 
         const nameEl = document.createElement('div');
         nameEl.className = 'player-name';
-        nameEl.textContent = isMyBoard ? 'You' : `Player ${playerId.substring(0, 6)}`;
+        nameEl.textContent = isMyBoard ? '🟢 You' : `🔵 Player ${playerId.substring(0, 6)}`;
         wrapper.appendChild(nameEl);
 
         const boardDiv = document.createElement('div');
@@ -177,10 +177,16 @@ const UIManager = {
             const cell = document.createElement('div');
             cell.className = 'board-cell';
             cell.dataset.index = index;
-            cell.textContent = num === 0 ? '✓' : num;
 
-            if (num === 0) cell.classList.add('crossed');
+            if (num === 0) {
+                cell.textContent = '✓';
+                cell.classList.add('crossed');
+            } else {
+                // 🔥 SAB NUMBERS DIKHO (chahe apna ho ya doosre ka)
+                cell.textContent = num;
+            }
 
+            // 🔥 Click sirf apne board par aur apni turn par
             if (isMyBoard && isCurrentPlayer && num !== 0) {
                 cell.addEventListener('click', () => {
                     GameLogic.handleCellClick(playerId, index);
@@ -258,7 +264,7 @@ const BoardGenerator = {
 };
 
 // ================================================================
-// BLOCK 6: ROOM MANAGER (WITH PRIVACY FIX)
+// BLOCK 6: ROOM MANAGER (FIXED)
 // ================================================================
 
 const RoomManager = {
@@ -413,9 +419,9 @@ const RoomManager = {
         return Math.random().toString(36).substring(2, 8).toUpperCase();
     },
 
-    // ================================================================
-    // 🔥 FIX: Sirf apna board dikhao, doosre ka nahi!
-    // ================================================================
+    // ============================================================
+    // 🔥 FIXED: Dono boards render karo (apna + doosre ka)
+    // ============================================================
     listenRoom(roomId) {
         const user = AuthManager.getCurrentUser();
         if (!user) return;
@@ -431,20 +437,20 @@ const RoomManager = {
             const players = room.players || [];
             UIManager.updateGameStatus(roomId, players, room.currentTurn);
 
-            // ============================================================
-            // PRIVACY FIX: Sirf current user ka board render karo
-            // ============================================================
             UIManager.clearBoards();
             const boards = room.playerBoards || {};
             const currentTurn = room.currentTurn;
             const winner = room.winner;
 
-            // Sirf current user ka board
-            const myBoard = boards[user.uid];
-            if (myBoard) {
-                const isCurrentPlayer = (currentTurn === user.uid && !winner);
-                UIManager.renderBoard(myBoard, user.uid, isCurrentPlayer, true);
-            }
+            // ============================================================
+            // 🔥 DONO BOARDS RENDER KARO (Apna + Doosre ka)
+            // ============================================================
+            Object.keys(boards).forEach(playerId => {
+                const board = boards[playerId];
+                const isMyBoard = (playerId === user.uid);
+                const isCurrentPlayer = (currentTurn === playerId && !winner);
+                UIManager.renderBoard(board, playerId, isCurrentPlayer, isMyBoard);
+            });
 
             // Winner check
             if (winner) {
@@ -496,6 +502,7 @@ const GameLogic = {
                 const board = room.playerBoards[playerId];
                 if (!board || board[cellIndex] === 0) return;
 
+                // 🔥 Number cross karo
                 board[cellIndex] = 0;
 
                 const result = this.checkWinner(board);
@@ -506,7 +513,6 @@ const GameLogic = {
                     updates['winner'] = playerId;
                     updates['winningCells'] = result.winningCells;
                     showToast(`🎉 You won!`, 'success');
-                    // Update profile stats
                     ProfileManager.addWin(user.uid);
                 } else {
                     const players = room.players || [];
@@ -654,5 +660,5 @@ document.addEventListener('DOMContentLoaded', () => {
     AuthManager.init();
     RoomManager.init();
     console.log('🎯 BINGO - Premium UI Loaded');
-    console.log('✅ Privacy Fix: Only your board is visible!');
+    console.log('✅ All boards visible with sync!');
 });
