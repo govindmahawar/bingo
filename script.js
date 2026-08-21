@@ -24,10 +24,7 @@ const firestore = firebase.firestore();
 
 function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
-    if (!container) {
-        console.warn('Toast container not found');
-        return;
-    }
+    if (!container) return;
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
@@ -157,7 +154,7 @@ const UIManager = {
         }
     },
 
-    renderBoard(boardData, playerId, isCurrentPlayer, isMyBoard) {
+    renderBoard(boardData, playerId, isCurrentPlayer) {
         const container = document.getElementById('game-boards-container');
         if (!container) return;
 
@@ -166,7 +163,7 @@ const UIManager = {
 
         const nameEl = document.createElement('div');
         nameEl.className = 'player-name';
-        nameEl.textContent = isMyBoard ? '🟢 Your Board' : `🔵 Player ${playerId.substring(0, 6)}`;
+        nameEl.textContent = '🟢 Your Board';
         wrapper.appendChild(nameEl);
 
         const boardDiv = document.createElement('div');
@@ -184,15 +181,16 @@ const UIManager = {
                 cell.textContent = num;
             }
 
-            // Click enable only if:
-            // 1. It's your board
-            // 2. It's your turn
-            // 3. Number is not crossed
-            if (isMyBoard && isCurrentPlayer && num !== 0) {
+            // Click sirf tab jab:
+            // 1. Apna board hai
+            // 2. Apni turn hai
+            // 3. Number cross nahi hai
+            if (isCurrentPlayer && num !== 0) {
                 cell.style.cursor = 'pointer';
-                cell.addEventListener('click', () => {
-                    console.log('Cell clicked:', playerId, index, num);
-                    GameLogic.handleCellClick(playerId, index);
+                cell.addEventListener('click', function() {
+                    const idx = parseInt(this.dataset.index);
+                    console.log('🔵 Cell clicked:', idx, num);
+                    GameLogic.handleCellClick(playerId, idx);
                 });
             } else {
                 cell.classList.add('disabled');
@@ -442,13 +440,11 @@ const RoomManager = {
             const currentTurn = room.currentTurn;
             const winner = room.winner;
 
-            // ============================================================
-            // 🔥 SIRF APNA BOARD SHOW KARO
-            // ============================================================
+            // 🔥 SIRF APNA BOARD
             const myBoard = boards[user.uid];
             if (myBoard) {
-                const isCurrentPlayer = (currentTurn === user.uid && !winner);
-                UIManager.renderBoard(myBoard, user.uid, isCurrentPlayer, true);
+                const isMyTurn = (currentTurn === user.uid && !winner);
+                UIManager.renderBoard(myBoard, user.uid, isMyTurn);
             }
 
             if (winner) {
@@ -468,7 +464,7 @@ const RoomManager = {
 };
 
 // ================================================================
-// BLOCK 7: GAME LOGIC (FIXED)
+// BLOCK 7: GAME LOGIC (SIMPLE & WORKING)
 // ================================================================
 
 const GameLogic = {
@@ -481,233 +477,80 @@ const GameLogic = {
     handleCellClick(playerId, cellIndex) {
         const user = AuthManager.getCurrentUser();
         if (!user || !this.roomId) {
-            console.error('No user or roomId');
+            showToast('Please login first!', 'error');
             return;
         }
 
-        console.log('🔵 Click received:', playerId, cellIndex);
+        console.log('🔵 Click:', playerId, cellIndex);
 
         const roomRef = db.ref('rooms/' + this.roomId);
         roomRef.once('value')
             .then(snapshot => {
                 const room = snapshot.val();
                 if (!room) {
-                    console.error('Room not found');
+                    showToast('Room not found!', 'error');
                     return;
                 }
 
-                // Check if game is already won
+                // Game already finished?
                 if (room.winner) {
                     showToast('Game already finished!', 'error');
                     return;
                 }
 
-                // Check if it's this player's turn
+                // Correct turn?
                 if (room.currentTurn !== user.uid) {
-                    showToast('❌ Not your turn!', 'error');
+                    showToast('Not your turn!', 'error');
                     return;
                 }
 
-                // Get the board
+                // Get player's board
                 const board = room.playerBoards[playerId];
                 if (!board) {
-                    console.error('Board not found for player:', playerId);
+                    showToast('Board not found!', 'error');
                     return;
                 }
 
-                // Check if number is already crossed
+                // Already crossed?
                 if (board[cellIndex] === 0) {
-                    showToast('Number already crossed!', 'error');
+                    showToast('Already crossed!', 'error');
                     return;
                 }
 
-                // Get the number that was clicked
                 const number = board[cellIndex];
-                console.log('🎯 Number clicked:', number);
+                console.log('🎯 Number:', number);
 
-                // Create updates object
+                // Prepare updates
                 const updates = {};
 
                 // 1. Cross on current player's board
                 board[cellIndex] = 0;
                 updates['playerBoards/' + playerId] = board;
 
-                // 2. Cross same number on all other players' boards
+                // 2. Cross on all other players' boards
                 const allPlayers = room.players || [];
                 allPlayers.forEach(pid => {
-                    if (pid === playerId) return; // Skip current player
+                    if (pid === playerId) return;
                     const oppBoard = room.playerBoards[pid];
                     if (!oppBoard) return;
-                    const oppIndex = oppBoard.indexOf(number);
-                    if (oppIndex !== -1) {
-                        oppBoard[oppIndex] = 0;
+                    const idx = oppBoard.indexOf(number);
+                    if (idx !== -1) {
+                        oppBoard[idx] = 0;
                         updates['playerBoards/' + pid] = oppBoard;
-                        console.log('✅ Crossed on player:', pid, 'at index:', oppIndex);
+                        console.log('✅ Crossed on:', pid);
                     }
                 });
 
-                // 3. Check if current player won
+                // 3. Check winner
                 const result = GameLogic.checkWinner(board);
 
                 if (result.won) {
                     updates['winner'] = playerId;
                     updates['winningCells'] = result.winningCells;
-                    showToast(`🎉 You won! Congratulations!`, 'success');
+                    showToast('🎉 You won! Congratulations!', 'success');
                     ProfileManager.addWin(user.uid);
-                    console.log('🏆 Winner:', playerId);
                 } else {
-                    // 4. Pass turn to next player
+                    // 4. Next turn
                     const currentIndex = allPlayers.indexOf(playerId);
                     const nextIndex = (currentIndex + 1) % allPlayers.length;
-                    updates['currentTurn'] = allPlayers[nextIndex];
-                    console.log('🔄 Next turn:', allPlayers[nextIndex]);
-                }
-
-                // 5. Update room in Firebase
-                return roomRef.update(updates);
-            })
-            .then(() => {
-                console.log('✅ Update successful!');
-            })
-            .catch(err => {
-                console.error('❌ Error:', err);
-                showToast('Error: ' + err.message, 'error');
-            });
-    },
-
-    checkWinner(board) {
-        const size = 5;
-        let winningCells = [];
-        let lineCount = 0;
-
-        // Check rows
-        for (let r = 0; r < size; r++) {
-            let allCrossed = true;
-            const rowCells = [];
-            for (let c = 0; c < size; c++) {
-                const idx = r * size + c;
-                if (board[idx] !== 0) allCrossed = false;
-                rowCells.push(idx);
-            }
-            if (allCrossed) {
-                lineCount++;
-                winningCells = winningCells.concat(rowCells);
-            }
-        }
-
-        // Check columns
-        for (let c = 0; c < size; c++) {
-            let allCrossed = true;
-            const colCells = [];
-            for (let r = 0; r < size; r++) {
-                const idx = r * size + c;
-                if (board[idx] !== 0) allCrossed = false;
-                colCells.push(idx);
-            }
-            if (allCrossed) {
-                lineCount++;
-                winningCells = winningCells.concat(colCells);
-            }
-        }
-
-        // Check diagonals
-        let d1 = true, d2 = true;
-        const diag1 = [], diag2 = [];
-        for (let i = 0; i < size; i++) {
-            const idx1 = i * size + i;
-            if (board[idx1] !== 0) d1 = false;
-            diag1.push(idx1);
-
-            const idx2 = i * size + (size - 1 - i);
-            if (board[idx2] !== 0) d2 = false;
-            diag2.push(idx2);
-        }
-        if (d1) { lineCount++; winningCells = winningCells.concat(diag1); }
-        if (d2) { lineCount++; winningCells = winningCells.concat(diag2); }
-
-        return {
-            won: lineCount >= 5,
-            winningCells: [...new Set(winningCells)]
-        };
-    }
-};
-
-// ================================================================
-// BLOCK 8: PROFILE MANAGER
-// ================================================================
-
-const ProfileManager = {
-    loadProfile(user) {
-        if (!user) return;
-        firestore.collection('users').doc(user.uid).get()
-            .then(doc => {
-                if (doc.exists) {
-                    const data = doc.data();
-                    document.getElementById('profile-name').textContent = data.name || user.displayName || 'Player';
-                    document.getElementById('profile-email').textContent = data.email || user.email || '';
-                    document.getElementById('stat-matches').textContent = data.matches || 0;
-                    document.getElementById('stat-wins').textContent = data.wins || 0;
-                    const winrate = data.matches > 0 ? Math.round((data.wins / data.matches) * 100) : 0;
-                    document.getElementById('stat-winrate').textContent = winrate + '%';
-                } else {
-                    firestore.collection('users').doc(user.uid).set({
-                        name: user.displayName || 'Player',
-                        email: user.email || '',
-                        matches: 0,
-                        wins: 0,
-                        createdAt: Date.now()
-                    });
-                }
-            });
-    },
-
-    addWin(uid) {
-        firestore.collection('users').doc(uid).get()
-            .then(doc => {
-                if (doc.exists) {
-                    const data = doc.data();
-                    firestore.collection('users').doc(uid).update({
-                        matches: (data.matches || 0) + 1,
-                        wins: (data.wins || 0) + 1
-                    });
-                }
-            });
-    }
-};
-
-// ================================================================
-// BLOCK 9: NAVIGATION
-// ================================================================
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Bottom navigation
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const page = item.dataset.page;
-            UIManager.showPage(page);
-            UIManager.setActiveNav(page);
-        });
-    });
-
-    // Edit profile
-    document.getElementById('btn-edit-profile').addEventListener('click', () => {
-        const user = AuthManager.getCurrentUser();
-        if (!user) return;
-        const newName = prompt('Enter new name:', document.getElementById('profile-name').textContent);
-        if (newName) {
-            firestore.collection('users').doc(user.uid).update({ name: newName })
-                .then(() => {
-                    user.updateProfile({ displayName: newName });
-                    document.getElementById('profile-name').textContent = newName;
-                    UIManager.updateHeader(user);
-                    showToast('Profile updated!', 'success');
-                });
-        }
-    });
-
-    // Initialize
-    AuthManager.init();
-    RoomManager.init();
-    console.log('🎯 BINGO - FINAL WORKING VERSION');
-    console.log('✅ Click should work now!');
-});
+       
