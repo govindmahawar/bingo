@@ -24,7 +24,10 @@ const firestore = firebase.firestore();
 
 function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
-    if (!container) return;
+    if (!container) {
+        console.warn('Toast container not found');
+        return;
+    }
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
@@ -154,9 +157,6 @@ const UIManager = {
         }
     },
 
-    // ============================================================
-    // 🔥 ONLY OWN BOARD SHOWN
-    // ============================================================
     renderBoard(boardData, playerId, isCurrentPlayer, isMyBoard) {
         const container = document.getElementById('game-boards-container');
         if (!container) return;
@@ -166,7 +166,7 @@ const UIManager = {
 
         const nameEl = document.createElement('div');
         nameEl.className = 'player-name';
-        nameEl.textContent = '🟢 Your Board';
+        nameEl.textContent = isMyBoard ? '🟢 Your Board' : `🔵 Player ${playerId.substring(0, 6)}`;
         wrapper.appendChild(nameEl);
 
         const boardDiv = document.createElement('div');
@@ -184,9 +184,14 @@ const UIManager = {
                 cell.textContent = num;
             }
 
-            // Click only if it's your board AND your turn AND not crossed
+            // Click enable only if:
+            // 1. It's your board
+            // 2. It's your turn
+            // 3. Number is not crossed
             if (isMyBoard && isCurrentPlayer && num !== 0) {
+                cell.style.cursor = 'pointer';
                 cell.addEventListener('click', () => {
+                    console.log('Cell clicked:', playerId, index, num);
                     GameLogic.handleCellClick(playerId, index);
                 });
             } else {
@@ -417,9 +422,6 @@ const RoomManager = {
         return Math.random().toString(36).substring(2, 8).toUpperCase();
     },
 
-    // ============================================================
-    // 🔥 ONLY OWN BOARD - NO ONE ELSE'S BOARD
-    // ============================================================
     listenRoom(roomId) {
         const user = AuthManager.getCurrentUser();
         if (!user) return;
@@ -441,7 +443,7 @@ const RoomManager = {
             const winner = room.winner;
 
             // ============================================================
-            // 🔥 SIRF APNA BOARD RENDER KARO
+            // 🔥 SIRF APNA BOARD SHOW KARO
             // ============================================================
             const myBoard = boards[user.uid];
             if (myBoard) {
@@ -466,7 +468,7 @@ const RoomManager = {
 };
 
 // ================================================================
-// BLOCK 7: GAME LOGIC
+// BLOCK 7: GAME LOGIC (FIXED)
 // ================================================================
 
 const GameLogic = {
@@ -478,85 +480,99 @@ const GameLogic = {
 
     handleCellClick(playerId, cellIndex) {
         const user = AuthManager.getCurrentUser();
-        if (!user || !this.roomId) return;
+        if (!user || !this.roomId) {
+            console.error('No user or roomId');
+            return;
+        }
+
+        console.log('🔵 Click received:', playerId, cellIndex);
 
         const roomRef = db.ref('rooms/' + this.roomId);
         roomRef.once('value')
             .then(snapshot => {
                 const room = snapshot.val();
-                if (!room) return;
-                if (room.winner) {
-                    showToast('Game already finished', 'error');
-                    return;
-                }
-                if (room.currentTurn !== user.uid) {
-                    showToast('Not your turn!', 'error');
+                if (!room) {
+                    console.error('Room not found');
                     return;
                 }
 
-                // ============================================================
-                // 🔥 CROSS NUMBER ON BOTH BOARDS
-                // ============================================================
+                // Check if game is already won
+                if (room.winner) {
+                    showToast('Game already finished!', 'error');
+                    return;
+                }
+
+                // Check if it's this player's turn
+                if (room.currentTurn !== user.uid) {
+                    showToast('❌ Not your turn!', 'error');
+                    return;
+                }
+
+                // Get the board
+                const board = room.playerBoards[playerId];
+                if (!board) {
+                    console.error('Board not found for player:', playerId);
+                    return;
+                }
+
+                // Check if number is already crossed
+                if (board[cellIndex] === 0) {
+                    showToast('Number already crossed!', 'error');
+                    return;
+                }
+
+                // Get the number that was clicked
+                const number = board[cellIndex];
+                console.log('🎯 Number clicked:', number);
+
+                // Create updates object
                 const updates = {};
 
-                // Cross on current player's board
-                const myBoard = room.playerBoards[playerId];
-                if (!myBoard || myBoard[cellIndex] === 0) return;
-                myBoard[cellIndex] = 0;
-                updates['playerBoards/' + playerId] = myBoard;
+                // 1. Cross on current player's board
+                board[cellIndex] = 0;
+                updates['playerBoards/' + playerId] = board;
 
-                // Cross on opponent's board (if number exists there)
+                // 2. Cross same number on all other players' boards
                 const allPlayers = room.players || [];
                 allPlayers.forEach(pid => {
                     if (pid === playerId) return; // Skip current player
-                    const oppBoard = room.playerBoards[pid];
-                    if (!oppBoard) return;
-                    // Find the same number in opponent's board
-                    const numToCross = room.playerBoards[playerId][cellIndex]; // Actually we need original number
-                    // Since we already set to 0, we need the original number
-                    // Better approach: store the number before crossing
-                });
-
-                // ✅ CORRECT APPROACH - Get number before crossing
-                const originalBoard = room.playerBoards[playerId];
-                const number = originalBoard[cellIndex];
-                if (number === 0) return;
-
-                // Cross on current player's board
-                originalBoard[cellIndex] = 0;
-                updates['playerBoards/' + playerId] = originalBoard;
-
-                // Cross on all other players' boards
-                const players = room.players || [];
-                players.forEach(pid => {
-                    if (pid === playerId) return;
                     const oppBoard = room.playerBoards[pid];
                     if (!oppBoard) return;
                     const oppIndex = oppBoard.indexOf(number);
                     if (oppIndex !== -1) {
                         oppBoard[oppIndex] = 0;
                         updates['playerBoards/' + pid] = oppBoard;
+                        console.log('✅ Crossed on player:', pid, 'at index:', oppIndex);
                     }
                 });
 
-                // Check winner on current player's board
-                const result = GameLogic.checkWinner(originalBoard);
+                // 3. Check if current player won
+                const result = GameLogic.checkWinner(board);
 
                 if (result.won) {
                     updates['winner'] = playerId;
                     updates['winningCells'] = result.winningCells;
-                    showToast(`🎉 You won!`, 'success');
+                    showToast(`🎉 You won! Congratulations!`, 'success');
                     ProfileManager.addWin(user.uid);
+                    console.log('🏆 Winner:', playerId);
                 } else {
-                    // Pass turn to next player
-                    const currentIndex = players.indexOf(playerId);
-                    const nextIndex = (currentIndex + 1) % players.length;
-                    updates['currentTurn'] = players[nextIndex];
+                    // 4. Pass turn to next player
+                    const currentIndex = allPlayers.indexOf(playerId);
+                    const nextIndex = (currentIndex + 1) % allPlayers.length;
+                    updates['currentTurn'] = allPlayers[nextIndex];
+                    console.log('🔄 Next turn:', allPlayers[nextIndex]);
                 }
 
+                // 5. Update room in Firebase
                 return roomRef.update(updates);
             })
-            .catch(err => console.error('Error:', err));
+            .then(() => {
+                console.log('✅ Update successful!');
+            })
+            .catch(err => {
+                console.error('❌ Error:', err);
+                showToast('Error: ' + err.message, 'error');
+            });
     },
 
     checkWinner(board) {
@@ -692,7 +708,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize
     AuthManager.init();
     RoomManager.init();
-    console.log('🎯 BINGO - PERFECT VERSION');
-    console.log('✅ Only own board shown');
-    console.log('✅ Click syncs across all players');
+    console.log('🎯 BINGO - FINAL WORKING VERSION');
+    console.log('✅ Click should work now!');
 });
